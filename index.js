@@ -84,15 +84,24 @@ let generateGrounds = async () => {
     return;
   }
 
-  let groundNames = ["Пандора", "Земля", "Бездна"];
-  let prefix = ["Темная", "Дождливая", "Пустынная"];
+  let availableGrounds = [
+    { type: "ISLAND", name: "Летний остров" },
+    { type: "ICELAND", name: "Морозный остров" },
+    { type: "DESERTLAND", name: "Пустынный остров" },
+    { type: "LAVALAND", name: "Лавовый остров" },
+    { type: "CRYSTALLAND", name: "Кристальный остров" },
+    { type: "TOXICLAND", name: "Ядовитый остров" },
+    { type: "WATERLAND", name: "Водный остров" },
+    { type: "CRYSTALLAND2", name: "Кристальный остров" },
+    { type: "DEADLAND", name: "Мертвый остров" },
+  ];
 
-  grounds = [...Array(100)].map((land, index) => {
-    let incomePerTick = Math.floor(Math.random() * 50);
+  let grounds = [...Array(100)].map((land, index) => {
+    let incomePerTick = Math.floor(Math.random() * 150);
+    let generatedLand = randomItemFromArray(availableGrounds);
     return {
-      name: `${randomItemFromArray(prefix)} ${randomItemFromArray(
-        groundNames
-      )}`,
+      name: generatedLand.name,
+      type: generatedLand.type,
       incomePerTick,
       price: incomePerTick * 128,
       ownerId: null,
@@ -118,9 +127,12 @@ let getUserOwn = async (id) => {
 let userTakeMoney = async (id, amount) => {
   let userOwn = await getUserOwn(id);
   let money = userOwn.money - amount;
-  await UserOwnModel.findOneAndUpdate(id, {
-    $set: { money: money },
-  });
+  await UserOwnModel.findOneAndUpdate(
+    { userId: id },
+    {
+      $set: { money: money },
+    }
+  );
   io.to(onlineUsers[id]).emit("money:update", money);
 };
 
@@ -172,7 +184,6 @@ setInterval(async () => {
         let user = await getUserOwn(ground.ownerId);
         if (user) {
           let money = user.money + ground.incomePerTick;
-
           await UserOwnModel.findOneAndUpdate(
             { userId: ground.ownerId },
             {
@@ -195,7 +206,7 @@ const initUser = async (id, socketId) => {
     if (!userOwn) {
       const newUserOwn = new UserOwnModel({
         userId: id,
-        money: 2500,
+        money: 15000,
       });
 
       newUserOwn.save();
@@ -210,6 +221,7 @@ const initUser = async (id, socketId) => {
 };
 
 io.on("connection", (socket) => {
+  console.log("New connection!");
   let { id } = socket.handshake.query;
   initUser(id, socket.id);
 
